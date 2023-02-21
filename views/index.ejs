@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/public/style.css">
+
+    <title>OPEN AI CHAT BOT</title>
+</head>
+
+<body>
+    <h1>OpenAI Chatbot</h1>
+    <form action="/" method="post">
+        <label for="prompt">Enter your prompt:</label>
+        <input type="text" id="prompt" name="prompt">
+        <button type="submit" id="button">Submit</button>
+    </form>
+    <div id="response">
+        <%= data %>
+    </div>
+
+    <script src="server.js" type="text/html"></script>
+
+</body>
+
+</html>
