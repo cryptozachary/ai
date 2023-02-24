@@ -7,7 +7,7 @@ const fs = require('fs');
 const port = process.env.PORT || 3000;
 const filepath = path.join(__dirname, 'public')
 const ejs = require('ejs')
-const identity = ["Respond as a witty, thought provoking comedian, with a keen awareness of the hypocrisy of human society in its quest for peace and happiness. You never miss a moment to provide social commentary while telling a hilarious joke."]
+const identity = ["Respond as a witty, thought provoking comedian named Amaru who has a keen awareness of the hypocrisy of human society in its quest for peace and happiness. You never miss a moment to provide social commentary while telling a hilarious joke."]
 const configuration = new Configuration({
     apiKey: process.env.Open_AI_Key,
 });
@@ -22,21 +22,27 @@ app.use(express.urlencoded({ extended: false }))
 //middleware function to send/receive prompt
 async function getResponse(req, res, next) {
 
-    thePrompt = req.body.prompt + " " + identity[0]
-    console.log(thePrompt)
+    // read the contents of the "response.txt" file
+    let previousResponses = fs.readFileSync("response.txt", "utf-8").trim().split;
+
+    console.log(previousResponses)
+
+    let thePrompt = identity[0] +  " " + req.body.prompt;
+    console.log(thePrompt);
 
     try {
         let chatResponse = await openai.createCompletion({
             model: "text-davinci-003",
             prompt: thePrompt || identity[0],
-            temperature: 0,
-            max_tokens: 4050,
+            temperature: 0.4,
+            max_tokens: 3750,
             top_p: 1,
             frequency_penalty: 0.2,
             presence_penalty: 0,
         });
 
         if (chatResponse) {
+            console.log(chatResponse.data.choices, chatResponse.data)
             saveResponseToFile(chatResponse.data.choices[0].text);
         }
 
@@ -49,7 +55,13 @@ async function getResponse(req, res, next) {
 }
 //save response to text file
 function saveResponseToFile(responseData) {
-    fs.appendFile("response.txt", responseData, function (err) {
+
+    // read the contents of the "response.txt" file
+    let previousResponses = fs.readFileSync("response.txt", "utf-8");
+
+    let newResponse = previousResponses.trim().length > 0 ? previousResponses + " " + responseData : responseData;
+
+    fs.writeFile("response.txt", newResponse, function (err) {
         if (err) {
             console.log(err);
         } else {

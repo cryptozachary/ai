@@ -11,12 +11,16 @@
 </head>
 
 <body>
-    <h1>OpenAI Chatbot</h1>
+    <h1>Meet Amaru!</h1>
+    <h2>An AI Jester as well a provider of critical social commentary!</h2>
     <form action="/" method="post">
-        <label for="prompt">Enter your prompt:</label>
+        <label for="prompt">Enter your question:</label>
         <input type="text" id="prompt" name="prompt">
         <button type="submit" id="button">Submit</button>
     </form>
+    <div class="amaru-container">
+        <img id="amaru-pic" src="/public/images/amru.png" alt="Picture of Amaru" />
+    </div>
     <div class="response-container">
         <div id="response">
             <%= data %>
