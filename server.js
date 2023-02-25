@@ -31,18 +31,19 @@ async function getResponse(req, res, next) {
 
 
     console.log(previousResponses.length)
-    if (previousResponses.length >= 4000) {
+
+    if (previousResponses.length >= 4800) {
         console.log('Responses need to be summarized')
+
         // Clear the response.txt file if the number of words is close to 5000 characters
-        //fs.writeFileSync("response.txt", "");
-        //previousResponses = "";
-        await summarize(previousResponses)
+        fs.writeFileSync("response.txt", "");
+        //await summarize(previousResponses)
     }
 
     // Amaru identity , previous responses and current prompt sent to model
-    let thePrompt = identity[0] + " " + previousResponses + " " + req.body.prompt;
+    let thePrompt = identity[0] + " " + previousResponses + " " + (!req.body.prompt ? "" : req.body.prompt);
 
-    //console.log(thePrompt);
+    console.log(thePrompt);
 
     try {
         let chatResponse = await openai.createCompletion({
@@ -55,9 +56,11 @@ async function getResponse(req, res, next) {
             presence_penalty: 0,
         });
 
+        // add input prompt to the saved file
+        let questionResponse = (!req.body.prompt ? "" : req.body.prompt) + " " + chatResponse.data.choices[0].text
+
         if (chatResponse) {
-            //console.log(chatResponse.data.choices, chatResponse)
-            saveResponseToFile(chatResponse.data.choices[0].text);
+            saveResponseToFile(questionResponse);
         }
 
         // attach response to request object
@@ -69,17 +72,13 @@ async function getResponse(req, res, next) {
         next(error)
     }
 }
+
 //save response to text file
 function saveResponseToFile(responseData) {
-
-    // read the contents of the "response.txt" file
-    //let previousResponses = fs.readFileSync("response.txt", "utf-8");
-
-    // let newResponse = previousResponses.trim().length > 0 ? previousResponses + " " + responseData : responseData;
-
+    //remove line breaks etc..
     let cleanResponse = responseData.replace(/\n/g, '')
 
-    fs.appendFile("response.txt", `${cleanResponse}, `, function (err) {
+    fs.appendFile("response.txt", `${cleanResponse} `, function (err) {
         if (err) {
             console.log(err);
         } else {
@@ -89,39 +88,38 @@ function saveResponseToFile(responseData) {
 }
 
 //summarize response file data with curie
-async function summarize(savedResponses) {
+// async function summarize(savedResponses) {
 
-    try {
-        let chatResponse = await openai.createCompletion({
-            model: "text-curie-001",
-            prompt: "What are the main topics of this passage" + savedResponses,
-            temperature: 0.9,
-            max_tokens: 1050,
-            top_p: 1,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-            best_of: 1,
-        });
+//     try {
+//         let chatResponse = await openai.createCompletion({
+//             model: "text-curie-001",
+//             prompt: "What are the main topics of this passage" + savedResponses,
+//             temperature: 0.9,
+//             max_tokens: 1050,
+//             top_p: 1,
+//             frequency_penalty: 0,
+//             presence_penalty: 0,
+//             best_of: 1,
+//         });
 
-        if (chatResponse) {
-            console.log("Curied said" + chatResponse.data.choices[0].text)
-            fs.writeFileSync("response.txt", "");
-            saveResponseToFile(chatResponse.data.choices[0].text);
-        }
+//         if (chatResponse) {
+//             console.log("Curied said" + chatResponse.data.choices[0].text)
+//             fs.writeFileSync("response.txt", "");
+//             saveResponseToFile(chatResponse.data.choices[0].text);
+//         }
 
-        //req.APIresponse = chatResponse
 
-    } catch (error) {
-        console.log('error caught!')
-    }
-}
+//     } catch (error) {
+//         console.log('error caught!')
+//     }
+// }
 
 
 
 //routes
 app.get('/', getResponse, (req, res) => {
 
-    // renderds
+    // render
     res.render("index", { data: req.APIresponse.data.choices[0].text, });
 });
 
