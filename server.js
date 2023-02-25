@@ -7,11 +7,15 @@ const fs = require('fs');
 const port = process.env.PORT || 3000;
 const filepath = path.join(__dirname, 'public')
 const ejs = require('ejs')
-const identity = ["Respond as a witty, deep thinking, thought provoking comedian named Amaru who has a keen awareness of the hypocrisy of human society in its quest for peace and happiness. You never miss a moment to provide social commentary while telling a hilarious joke."]
 const configuration = new Configuration({
     apiKey: process.env.Open_AI_Key,
 });
 const openai = new OpenAIApi(configuration);
+
+
+// Prompt Identity for Amaru
+const identity = ["Respond as a witty, deep thinking, thought provoking comedian named Amaru who has a keen awareness of the hypocrisy of human society in its quest for peace and happiness. You never miss a moment to provide social commentary while telling a hilarious joke."]
+
 
 app.set('view engine', 'ejs');
 app.use("/public", express.static("public"));
@@ -25,10 +29,20 @@ async function getResponse(req, res, next) {
     // read the contents of the "response.txt" file
     let previousResponses = fs.readFileSync("response.txt", "utf-8");
 
-    console.log(previousResponses)
 
+    console.log(previousResponses.length)
+    if (previousResponses.length >= 4000) {
+        console.log('Responses need to be summarized')
+        // Clear the response.txt file if the number of words is close to 5000 characters
+        //fs.writeFileSync("response.txt", "");
+        //previousResponses = "";
+        await summarize(previousResponses)
+    }
+
+    // Amaru identity , previous responses and current prompt sent to model
     let thePrompt = identity[0] + " " + previousResponses + " " + req.body.prompt;
-    console.log(thePrompt);
+
+    //console.log(thePrompt);
 
     try {
         let chatResponse = await openai.createCompletion({
@@ -46,7 +60,9 @@ async function getResponse(req, res, next) {
             saveResponseToFile(chatResponse.data.choices[0].text);
         }
 
+        // attach response to request object
         req.APIresponse = chatResponse
+
         next()
     } catch (error) {
         console.log(error)
@@ -57,9 +73,9 @@ async function getResponse(req, res, next) {
 function saveResponseToFile(responseData) {
 
     // read the contents of the "response.txt" file
-    let previousResponses = fs.readFileSync("response.txt", "utf-8");
+    //let previousResponses = fs.readFileSync("response.txt", "utf-8");
 
-    let newResponse = previousResponses.trim().length > 0 ? previousResponses + " " + responseData : responseData;
+    // let newResponse = previousResponses.trim().length > 0 ? previousResponses + " " + responseData : responseData;
 
     let cleanResponse = responseData.replace(/\n/g, '')
 
@@ -71,6 +87,36 @@ function saveResponseToFile(responseData) {
         }
     });
 }
+
+//summarize response file data with curie
+async function summarize(savedResponses) {
+
+    try {
+        let chatResponse = await openai.createCompletion({
+            model: "text-curie-001",
+            prompt: "What are the main topics of this passage" + savedResponses,
+            temperature: 0.9,
+            max_tokens: 1050,
+            top_p: 1,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+            best_of: 1,
+        });
+
+        if (chatResponse) {
+            console.log("Curied said" + chatResponse.data.choices[0].text)
+            fs.writeFileSync("response.txt", "");
+            saveResponseToFile(chatResponse.data.choices[0].text);
+        }
+
+        //req.APIresponse = chatResponse
+
+    } catch (error) {
+        console.log('error caught!')
+    }
+}
+
+
 
 //routes
 app.get('/', getResponse, (req, res) => {
