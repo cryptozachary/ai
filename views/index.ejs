@@ -11,24 +11,28 @@
 </head>
 
 <body>
-    <h1>Meet Amaru!</h1>
-    <h2>An AI Jester as well a provider of critical social commentary!</h2>
-    <form action="/" method="post">
-        <label for="prompt">Enter your question:</label>
-        <input type="text" id="prompt" name="prompt">
-        <button type="submit" id="button">Submit</button>
-    </form>
-    <div class="amaru-container">
-        <img id="amaru-pic" src="/public/images/amru.png" alt="Picture of Amaru" />
-    </div>
-    <div class="response-container">
-        <div id="response">
-            <%= data %>
+    <div class="content-container">
+        <div class="content-wrap">
+            <h1>Meet Amaru!</h1>
+            <h2>An AI Jester as well a provider of critical social commentary!</h2>
+            <form action="/" method="post">
+                <label for="prompt">Enter your question:</label>
+                <input type="text" id="prompt" name="prompt">
+                <button type="submit" id="button">Submit</button>
+            </form>
+            <div class="amaru-container">
+                <img id="amaru-pic" src="/public/images/amru.png" alt="Picture of Amaru" />
+            </div>
+            <div class="response-container">
+                <div id="response">
+                    <%= data %>
+                </div>
+            </div>
         </div>
-
+        <footer>
+            <h5>Verson 0.1 - Remembers conversations up to 5000 characters , then wiped and restarted!</h5>
+        </footer>
     </div>
-
-
     <script src="server.js" type="text/html"></script>
 
 </body>
