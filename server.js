@@ -41,14 +41,14 @@ async function getResponse(req, res, next) {
     }
 
     // Amaru identity , previous responses and current prompt sent to model
-    let thePrompt = identity[0] + " " + previousResponses + " " + (!req.body.prompt ? "" : req.body.prompt);
+    let thePrompt = previousResponses + " " + (!req.body.prompt ? "" : req.body.prompt);
 
     console.log(thePrompt);
 
     try {
-        let chatResponse = await openai.createCompletion({
-            model: "text-davinci-003",
-            prompt: thePrompt || identity[0],
+        let chatResponse = await openai.createChatCompletion({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "system", content: identity[0]}, { role: "user", content: thePrompt }],
             temperature: 0.4,
             max_tokens: 3050,
             top_p: 1,
@@ -57,7 +57,7 @@ async function getResponse(req, res, next) {
         });
 
         // add input prompt to the saved file
-        let questionResponse = (!req.body.prompt ? "" : req.body.prompt) + " " + chatResponse.data.choices[0].text
+        let questionResponse = (!req.body.prompt ? "" : req.body.prompt) + " " + chatResponse.data.choices[0].message.content
 
         if (chatResponse) {
             saveResponseToFile(questionResponse);
@@ -120,12 +120,12 @@ function saveResponseToFile(responseData) {
 app.get('/', getResponse, (req, res) => {
 
     // render
-    res.render("index", { data: req.APIresponse.data.choices[0].text, });
+    res.render("index", { data: req.APIresponse.data.choices[0].message.content, });
 });
 
 
 app.post('/', getResponse, (req, res) => {
-    res.render("index", { data: req.APIresponse.data.choices[0].text, });
+    res.render("index", { data: req.APIresponse.data.choices[0].message.content, });
 })
 
 
