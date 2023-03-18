@@ -4,9 +4,19 @@ require('dotenv').config()
 const app = express();
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose')
 const port = process.env.PORT || 3000;
+const Response = require('./models/Response')
 const filepath = path.join(__dirname, 'public')
 const ejs = require('ejs')
+
+//connect to mongo db
+mongoose.connect(process.env.MONGO_DB_ATLAS, {
+    useNewUrlParser: true,
+}).then(() => {
+    console.log('Connected to mongo db!')
+})
+
 const configuration = new Configuration({
     apiKey: process.env.Open_AI_Key,
 });
@@ -26,18 +36,29 @@ app.use(express.urlencoded({ extended: false }))
 //middleware function to send/receive prompt
 async function getResponse(req, res, next) {
 
-    // read the contents of the "response.txt" file
-    let previousResponses = fs.readFileSync("response.txt", "utf-8");
+    // read the contents of the "responses" collection
+    let previousResponses = '';
+    try {
+        const responses = await Response.find();
+        responses.forEach(doc => {
+            previousResponses += doc.response;
+        });
+    } catch (error) {
+        console.log(error);
+    }
 
+    console.log(previousResponses.length);
 
-    console.log(previousResponses.length)
-
-    if (previousResponses.length >= 4800) {
+    if (previousResponses.length >= 4500) {
         console.log('Responses need to be summarized')
 
-        // Clear the response.txt file if the number of words is close to 5000 characters
-        fs.writeFileSync("response.txt", "");
-        //await summarize(previousResponses)
+        // delete all documents from the "responses" collection
+        try {
+            await Response.deleteMany()
+        } catch (error) {
+            console.log(error);
+        }
+
     }
 
     // Amaru identity , previous responses and current prompt sent to model
@@ -48,9 +69,9 @@ async function getResponse(req, res, next) {
     try {
         let chatResponse = await openai.createChatCompletion({
             model: "gpt-3.5-turbo",
-            messages: [{ role: "system", content: identity[0]}, { role: "user", content: thePrompt }],
+            messages: [{ role: "system", content: identity[0] }, { role: "user", content: thePrompt }],
             temperature: 0.4,
-            max_tokens: 3050,
+            max_tokens: 3000,
             top_p: 1,
             frequency_penalty: 0.2,
             presence_penalty: 0,
@@ -74,17 +95,17 @@ async function getResponse(req, res, next) {
 }
 
 //save response to text file
-function saveResponseToFile(responseData) {
+async function saveResponseToFile(responseData) {
     //remove line breaks etc..
     let cleanResponse = responseData.replace(/\n/g, '')
 
-    fs.appendFile("response.txt", `${cleanResponse} `, function (err) {
-        if (err) {
-            console.log(err);
-        } else {
-            console.log("Response saved to response.txt");
-        }
-    });
+    try {
+        const response = new Response({ response: cleanResponse });
+        await response.save();
+        console.log("Response saved to MongoDB collection");
+    } catch (error) {
+        console.log(error);
+    }
 }
 
 //summarize response file data with curie
