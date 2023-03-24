@@ -156,7 +156,7 @@ app.get("/search", async (req, res) => {
 
     try {
         const results = await search(q);
-        res.json(results);
+        res.render("response", { results });
     } catch (err) {
         console.error(err);
         res.status(500).send("Failed to search");

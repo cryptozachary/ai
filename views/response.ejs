@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="../public/response.css">
+
+    <title>Search Results</title>
+</head>
+
+<body>
+    <% if (results.length===0) { %>
+        <p>No results found.</p>
+        <% } else { %>
+            <ul>
+                <% results.forEach(result=> { %>
+                    <li>
+                        <a href="<%= result.link %>">
+                            <%= result.title %>
+                        </a>
+                        <p>
+                            <%= result.snippet %>
+                        </p>
+                    </li>
+                    <% }); %>
+            </ul>
+            <% } %>
+</body>
+
+</html>

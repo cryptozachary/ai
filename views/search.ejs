@@ -1,12 +1,18 @@
 <html>
-    <head>
-        <title>Search</title>
-    </head>
-    <body>
-        <form action="/search" method="get">
-            <label for="q">Search:</label>
-            <input type="text" name="q" id="q" />
-            <button type="submit">Submit</button>
-        </form>
-    </body>
+
+<head>
+    <link rel="stylesheet" href="../public/bar.css">
+    <title>Search</title>
+</head>
+
+<body>
+    <form action="/search" method="GET">
+        <div class="form-group">
+            <input type="text" name="q" class="form-control" placeholder="Search...">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+
+</body>
+
 </html>
