@@ -9,6 +9,8 @@ const port = process.env.PORT || 3000;
 const Response = require('./models/Response')
 const filepath = path.join(__dirname, 'public')
 const ejs = require('ejs')
+const { search } = require('./search/google')
+
 
 //connect to mongo db
 mongoose.connect(process.env.MONGO_DB_ATLAS, {
@@ -149,6 +151,21 @@ app.post('/', getResponse, (req, res) => {
     res.render("index", { data: req.APIresponse.data.choices[0].message.content, });
 })
 
+app.get("/search", async (req, res) => {
+    const { q } = req.query;
+
+    try {
+        const results = await search(q);
+        res.json(results);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Failed to search");
+    }
+});
+
+app.get('/searchbar', (req, res) => {
+    res.render("search")
+})
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
