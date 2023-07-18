@@ -57,6 +57,8 @@ button[type="submit"] {
     display: flex;
     justify-content: center;
     padding: 15px;
+    max-height: 700px;
+    overflow-y: auto;
 }
 
 .amaru-container {
