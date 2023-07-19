@@ -1,91 +1,88 @@
-const { Configuration, OpenAIApi } = require("openai");
+// Module Imports
 const express = require('express');
-require('dotenv').config()
-const app = express();
+const mongoose = require('mongoose');
 const path = require('path');
-const mongoose = require('mongoose')
+const { Configuration, OpenAIApi } = require("openai");
+const { search } = require('./search/google');
+const Response = require('./models/Response');
+
+// Load environment variables
+require('dotenv').config();
+
+const app = express();
 const port = process.env.PORT || 3000;
-const Response = require('./models/Response')
-const filepath = path.join(__dirname, 'public')
-const ejs = require('ejs')
-const { search } = require('./search/google')
-
-//connect to mongo db
-mongoose.connect(process.env.MONGO_DB_ATLAS, {
-    useNewUrlParser: true,
-}).then(() => {
-    console.log('Connected to mongo db!')
-})
-
-const configuration = new Configuration({
-    apiKey: process.env.Open_AI_Key,
-});
-const openai = new OpenAIApi(configuration);
-
 // Prompt Identity for Amaru
 const identity = ["Respond as a witty, deep thinking, thought provoking comedian named Amaru who has a keen awareness of the hypocrisy of human society in its quest for peace and happiness. You never miss a moment to provide social commentary while telling a hilarious joke."]
 
+// Setup view engine and middleware
 app.set('view engine', 'ejs');
-app.use("/public", express.static("public"));
-app.use(express.json())
-app.use(express.urlencoded({ extended: false }))
+app.use("/public", express.static(path.join(__dirname, "public")));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// Middleware function to update/check response length
-async function updateResponseLength(responses) {
-    let responseLength = 0;
+// Initialize the OpenAI API client
+const openai = new OpenAIApi(new Configuration({
+    apiKey: process.env.Open_AI_Key,
+}));
 
-    // Calculate total length of the responses
-    responses.forEach(response => {
-        responseLength += response.response.length;
-    });
-
-    // Find or create the ResponseLength document
-    let responseLengthDoc;
+// Function to connect to the MongoDB database
+async function connectToDatabase() {
     try {
-        responseLengthDoc = await ResponseLength.findOne() || new ResponseLength();
-        responseLengthDoc.length = responseLength;
-        await responseLengthDoc.save();
+        await mongoose.connect(process.env.MONGO_DB_ATLAS, {
+            useNewUrlParser: true,
+        });
+        console.log('Connected to mongo db!');
     } catch (error) {
-        console.error('Failed to update response length:', error);
+        console.error('Failed to connect to MongoDB:', error);
     }
-
-    return responseLengthDoc.length;
 }
 
-// Middleware function to send/receive prompt
-async function getResponse(req, res, next) {
+// Utility function to fetch all previous responses from the database
+async function fetchPreviousResponses() {
+    return (await Response.find()).map(doc => doc.response).join('');
+}
 
-    // read the contents of the "responses" collection
-    let previousResponses = '';
-    try {
-        const responses = await Response.find();
-        responses.forEach(doc => {
-            previousResponses += doc.response;
-        });
-    } catch (error) {
-        console.log(error);
-    }
+// Utility function to calculate the total length of all stored responses
+async function calculateTotalResponseLength() {
+    const responses = await Response.find();
+    return responses.reduce((acc, response) => acc + response.response.length, 0);
+}
 
-    console.log(previousResponses.length);
+// Function to Trim responses
+async function trimOldResponses(targetLength) {
+    // Get all responses sorted from oldest to newest
+    const responses = await Response.find().sort({ createdAt: 1 });
+    let totalLength = 0;
 
-    if (previousResponses.length >= 16000) {
-        console.log('Responses need to be summarized or deleted')
-
-        // delete all documents from the "responses" collection
-        try {
-            await Response.deleteMany();
-        } catch (error) {
-            console.log(error);
+    for (let response of responses) {
+        totalLength += response.response.length;
+        if (totalLength > targetLength) {
+            // Delete this particular response
+            await Response.findByIdAndDelete(response._id);
+            totalLength -= response.response.length;
+        } else {
+            break;
         }
     }
+}
 
-    // Amaru identity , previous responses and current prompt sent to model
-    let thePrompt = previousResponses + " " + (!req.body.prompt ? "" : req.body.prompt);
-
-    console.log(thePrompt);
-
+// Middleware to process and retrieve a response from OpenAI
+async function getResponse(req, res, next) {
     try {
-        let chatResponse = await openai.createChatCompletion({
+        let previousResponses = await fetchPreviousResponses();
+
+        // If total previous response length exceeds a limit, trim oldest responses
+        if (previousResponses.length >= 16000) {
+            console.log('Trimming old responses...');
+            await trimOldResponses(15000); // trim down to 15000 to allow space for new responses
+            previousResponses = await fetchPreviousResponses();
+        }
+
+        // Construct the prompt for the model
+        const thePrompt = previousResponses + (req.body.prompt || '');
+
+        // Get the response from OpenAI model
+        const chatResponse = await openai.createChatCompletion({
             model: "gpt-3.5-turbo-16k",
             messages: [{ role: "system", content: identity[0] }, { role: "user", content: thePrompt }],
             temperature: 0.4,
@@ -95,71 +92,54 @@ async function getResponse(req, res, next) {
             presence_penalty: 0,
         });
 
-        // add input prompt to the saved file
-        let questionResponse = (!req.body.prompt ? "" : req.body.prompt) + " " + chatResponse.data.choices[0].message.content
+        // Construct the response string and save it
+        const questionResponse = (req.body.prompt || '') + " " + chatResponse.data.choices[0].message.content;
 
-        if (chatResponse) {
-            await saveResponseToFile(questionResponse);
-        }
+        await saveResponseToDB(questionResponse);
 
-        // attach response to request object
-        req.APIresponse = chatResponse
+        // Attach the chat response to the request for further processing
+        req.APIresponse = chatResponse;
+        next();
 
-        next()
     } catch (error) {
-        console.log(error)
-        next(error)
+        console.error(error);
+        next(error);
     }
 }
 
-// Save response to database
-async function saveResponseToFile(responseData) {
-    //remove line breaks etc..
-    let cleanResponse = responseData.replace(/\n/g, '');
-
-    let totalResponseLength = cleanResponse.length;
-
+// Function to save a given response to the database
+async function saveResponseToDB(responseData) {
     try {
-        // get all the responses
-        const responses = await Response.find();
+        // Remove line breaks from the response
+        const cleanResponse = responseData.replace(/\n/g, '');
 
-        // calculate total length of all responses
-        responses.forEach(response => {
-            totalResponseLength += response.response.length;
-        });
-
-        // if total length is greater than 5000, delete all existing responses
-        if (totalResponseLength > 16000) {
-            console.log('Responses wiped');
-            await Response.deleteMany();
+        // Check the total length of responses, and trim  if it exceeds a limit
+        if ((cleanResponse.length + await calculateTotalResponseLength()) > 16000) {
+            console.log('Trimming old responses before saving new one...');
+            await trimOldResponses(16000 - cleanResponse.length);
         }
 
-        // save new response
+        // Save the current response to the database
         const response = new Response({ response: cleanResponse });
         await response.save();
         console.log("Response saved to MongoDB collection");
-        console.log(totalResponseLength);
 
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
 }
 
-
-//routes
-
+// Define the API routes
 app.get('/', getResponse, (req, res) => {
-    // render
-    res.render("index", { data: req.APIresponse.data.choices[0].message.content, });
+    res.render("index", { data: req.APIresponse.data.choices[0].message.content });
 });
 
 app.post('/', getResponse, (req, res) => {
-    res.render("index", { data: req.APIresponse.data.choices[0].message.content, });
+    res.render("index", { data: req.APIresponse.data.choices[0].message.content });
 });
 
 app.get("/search", async (req, res) => {
     const { q } = req.query;
-
     try {
         const results = await search(q);
         res.render("response", { results });
@@ -173,6 +153,8 @@ app.get('/searchbar', (req, res) => {
     res.render("search");
 });
 
+// Connect to the database and start the server
+connectToDatabase();
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
