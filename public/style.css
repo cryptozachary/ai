@@ -29,12 +29,13 @@ h2 {
 
 h1 {
     margin-top: 50px;
-    grid-row-start: 4;
+    grid-row-start: 1;
+    grid-column-start: 1;
+    grid-column-end: 3;
 }
 
 h2 {
-    margin-top: 25px;
-    grid-column-start: 1;
+    grid-row-start: 1;
     grid-row-start: 5;
 }
 
@@ -88,6 +89,7 @@ button[type="submit"] {
     height: 250px;
     justify-content: center;
     grid-row-start: 3;
+    grid-row-end: 5;
 }
 
 #amaru-pic {
@@ -141,16 +143,17 @@ footer {
     form {
         grid-column-start: 1;
         grid-column-end: 3;
-        grid-row-start: 4;
+        grid-row-start: 5;
     }
 
     .response-container {
         grid-column-start: 1;
-        grid-row-start: 5;
+        grid-row-start: 6;
         max-height: 700px;
     }
 
     .amaru-container {
+        grid-column-start: 1;
         grid-row-start: 3;
     }
 }
