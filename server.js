@@ -5,6 +5,12 @@ const path = require('path');
 const { Configuration, OpenAIApi } = require("openai");
 const { search } = require('./search/google');
 const Response = require('./models/Response');
+const fs = require('fs')
+const multer = require('multer')
+
+// multer variabl;es
+const storage = multer.memoryStorage(); // This will store the file in memory. You can also save it to disk or other places.
+const upload = multer({ storage: storage });
 
 // Load environment variables
 require('dotenv').config();
@@ -107,6 +113,20 @@ async function getResponse(req, res, next) {
     }
 }
 
+async function showFiles(req, res, next) {
+
+    try {
+        const response = await openai.listFiles();
+        console.log(response.data.object.list)
+        next()
+    }
+    catch (error) {
+        console.error(error)
+        next(console.error());
+    }
+
+}
+
 // Function to save a given response to the database
 async function saveResponseToDB(responseData) {
     try {
@@ -130,14 +150,22 @@ async function saveResponseToDB(responseData) {
 }
 
 // Define the API routes
-app.get('/', getResponse, (req, res) => {
+app.get('/', getResponse, showFiles, (req, res) => {
     res.render("index", { data: req.APIresponse.data.choices[0].message.content });
 });
 
-app.post('/', getResponse, (req, res) => {
+app.post('/', getResponse, showFiles, (req, res) => {
     res.render("index", { data: req.APIresponse.data.choices[0].message.content });
 });
 
+app.post('/upload', getResponse, showFiles, upload.single('selectedFile'), (req, res) => {
+    console.log('File uploaded:', req.file); // This logs the uploaded file's details
+    res.render('index', { data: req.APIresponse.data.choices[0].message.content })
+
+});
+
+
+// google search route
 app.get("/search", async (req, res) => {
     const { q } = req.query;
     try {
