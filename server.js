@@ -43,6 +43,41 @@ async function connectToDatabase() {
     }
 }
 
+async function analyzeFile(req, res) {
+
+    // Check if a file was uploaded
+    if (!req.file) {
+        return res.status(400).send("No file uploaded");
+    }
+
+    // Generate a prompt based on the uploaded file
+    const prompt = `Describe the contents of the file named ${req.file.originalname}`;
+
+    try {
+        // Send the prompt to OpenAI and get a response
+        const chatResponse = await openai.createChatCompletion({
+            model: "gpt-3.5-turbo-16k",
+            messages: [{ role: "system", content: identity[0] }, { role: "user", content: prompt }],
+            temperature: 0.4,
+            max_tokens: 12200,
+            top_p: 1,
+            frequency_penalty: 0.2,
+            presence_penalty: 0,
+
+        });
+        // Save the chatResponse to MongoDB (or any temporary storage you prefer)
+        const response = new Response({ response: chatResponse.data.choices[0].message.content });
+        await response.save();
+
+        // Redirect to home route with an identifier to fetch this response
+        return response._id
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Error processing the file and getting a response from OpenAI");
+    }
+}
+
 // Utility function to fetch all previous responses from the database
 async function fetchPreviousResponses() {
     return (await Response.find()).map(doc => doc.response).join('');
@@ -78,9 +113,9 @@ async function getResponse(req, res, next) {
         let previousResponses = await fetchPreviousResponses();
 
         // If total previous response length exceeds a limit, trim oldest responses
-        if (previousResponses.length >= 16000) {
+        if (previousResponses.length >= 15000) {
             console.log('Trimming old responses...');
-            await trimOldResponses(15000); // trim down to 15000 to allow space for new responses
+            await trimOldResponses(14000); // trim down to 15000 to allow space for new responses
             previousResponses = await fetchPreviousResponses();
         }
 
@@ -133,10 +168,20 @@ async function saveResponseToDB(responseData) {
         // Remove line breaks from the response
         const cleanResponse = responseData.replace(/\n/g, '');
 
+
+        // Check for existing entry in the database that matches the response data
+        const existingEntry = await Response.findOne({ response: cleanResponse });
+
+        // If an exact match is found, don't save and return
+        if (existingEntry) {
+            console.log('Duplicate entry found. Not saving to the database.');
+            return;
+        }
+
         // Check the total length of responses, and trim  if it exceeds a limit
-        if ((cleanResponse.length + await calculateTotalResponseLength()) > 16000) {
+        if ((cleanResponse.length + await calculateTotalResponseLength()) > 15000) {
             console.log('Trimming old responses before saving new one...');
-            await trimOldResponses(16000 - cleanResponse.length);
+            await trimOldResponses(15000 - cleanResponse.length);
         }
 
         // Save the current response to the database
@@ -150,20 +195,37 @@ async function saveResponseToDB(responseData) {
 }
 
 // Define the API routes
-app.get('/', getResponse, showFiles, (req, res) => {
-    res.render("index", { data: req.APIresponse.data.choices[0].message.content });
+app.get('/', getResponse, showFiles, async (req, res) => {
+    let responseData = req.APIresponse.data.choices[0].message.content;
+
+    // If there's a responseId in the query parameters
+    if (req.query.responseId) {
+        // Fetch the specific response from MongoDB
+        const specificResponse = await Response.findById(req.query.responseId);
+        if (specificResponse) {
+            responseData = specificResponse.response;
+        }
+    }
+
+    res.render("index", { data: responseData });
 });
 
 app.post('/', getResponse, showFiles, (req, res) => {
     res.render("index", { data: req.APIresponse.data.choices[0].message.content });
 });
 
-app.post('/upload', getResponse, showFiles, upload.single('selectedFile'), (req, res) => {
+app.post('/upload', getResponse, showFiles, upload.single('selectedFile'), async (req, res, next) => {
     console.log('File uploaded:', req.file); // This logs the uploaded file's details
-    res.render('index', { data: req.APIresponse.data.choices[0].message.content })
 
+    try {
+        const responseId = await analyzeFile(req, res);
+        res.redirect(`/?responseId=${responseId}`);
+    } catch (error) {
+        console.error("Error in analyzing file:", error);
+        // You can handle the error here, perhaps sending a 500 response or a custom error message.
+        res.status(500).send("Error analyzing the uploaded file");
+    }
 });
-
 
 // google search route
 app.get("/search", async (req, res) => {
