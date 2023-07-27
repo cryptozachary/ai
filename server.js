@@ -111,11 +111,12 @@ async function trimOldResponses(targetLength) {
 async function getResponse(req, res, next) {
     try {
         let previousResponses = await fetchPreviousResponses();
+        console.log(previousResponses.length)
 
         // If total previous response length exceeds a limit, trim oldest responses
-        if (previousResponses.length >= 15000) {
+        if (previousResponses.length >= 14000) {
             console.log('Trimming old responses...');
-            await trimOldResponses(14000); // trim down to 15000 to allow space for new responses
+            await trimOldResponses(14000); // trim down to 14000 to allow space for new responses
             previousResponses = await fetchPreviousResponses();
         }
 
@@ -167,7 +168,7 @@ async function saveResponseToDB(responseData) {
     try {
         // Remove line breaks from the response
         const cleanResponse = responseData.replace(/\n/g, '');
-
+        console.log(cleanResponse.length)
 
         // Check for existing entry in the database that matches the response data
         const existingEntry = await Response.findOne({ response: cleanResponse });
@@ -179,9 +180,9 @@ async function saveResponseToDB(responseData) {
         }
 
         // Check the total length of responses, and trim  if it exceeds a limit
-        if ((cleanResponse.length + await calculateTotalResponseLength()) > 15000) {
+        if ((cleanResponse.length + await calculateTotalResponseLength()) > 14000) {
             console.log('Trimming old responses before saving new one...');
-            await trimOldResponses(15000 - cleanResponse.length);
+            await trimOldResponses(14000 - cleanResponse.length);
         }
 
         // Save the current response to the database
