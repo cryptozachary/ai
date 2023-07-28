@@ -4,6 +4,14 @@
     padding: 0;
 }
 
+header {
+    background-color: rgb(19, 18, 18);
+    grid-column-start: 1;
+    grid-row-start: 1;
+    grid-column-end: 3;
+    height: 100%;
+}
+
 body {
     font-family: Arial, sans-serif;
     color: white;
@@ -29,14 +37,17 @@ h2 {
 
 h1 {
     margin-top: 50px;
+    margin-bottom: 10px;
     grid-row-start: 1;
     grid-column-start: 1;
     grid-column-end: 3;
 }
 
 h2 {
-    grid-row-start: 1;
-    grid-row-start: 5;
+    display: inherit;
+    grid-row-start: 2;
+    grid-column-start: 1;
+    grid-column-end: 3;
     align-self: flex-start;
 }
 
@@ -82,7 +93,7 @@ button[type="submit"] {
     max-height: 600px;
     overflow-y: auto;
     grid-column-start: 2;
-    grid-row-start: 3;
+    grid-row-start: 4;
     grid-row-end: 6;
 }
 
@@ -90,8 +101,8 @@ button[type="submit"] {
     display: flex;
     height: 250px;
     justify-content: center;
-    grid-row-start: 3;
-    grid-row-end: 5;
+    grid-row-start: 4;
+    grid-row-end: 6;
     flex-direction: column;
     /* Makes children stack vertically */
     align-items: center;
@@ -164,18 +175,25 @@ footer {
 
     form {
         grid-column-start: 1;
-        grid-column-end: 3;
-        grid-row-start: 5;
+        grid-row-start: 2;
     }
 
     .response-container {
         grid-column-start: 1;
-        grid-row-start: 6;
+        grid-row-start: 5;
         max-height: 700px;
     }
 
     .amaru-container {
         grid-column-start: 1;
         grid-row-start: 3;
+        grid-row-end: 5;
+        height: unset;
+        justify-content: unset;
+        margin-bottom: 10px;
+    }
+
+    .label-prompt {
+        margin-top: 10px;
     }
 }
