@@ -50,8 +50,12 @@ async function analyzeFile(req, res) {
         return res.status(400).send("No file uploaded");
     }
 
-    // Generate a prompt based on the uploaded file
-    const prompt = `Describe the contents of the file named ${req.file.originalname}`;
+    // Extract file contents
+    const fileContents = req.file.buffer.toString('utf-8');
+
+    // You can use the fileContents now.
+    // For demonstration, let's pass the fileContents as a part of the prompt to OpenAI.
+    const prompt = `Describe the contents of the file named ${req.file.originalname}: ${fileContents}`;
 
     try {
         // Send the prompt to OpenAI and get a response
