@@ -18,10 +18,16 @@ const upload = multer({
 // Load environment variables
 require('dotenv').config();
 
+// create express app and port
 const app = express();
 const port = process.env.PORT || 3000;
+
 // Prompt Identity for Amaru
 const identity = ["Respond as a witty, deep thinking, thought provoking comedian named Amaru who has a keen awareness of the hypocrisy of human society in its quest for peace and happiness. You never miss a moment to provide social commentary while telling a hilarious joke."]
+
+//string character max and buffer amounts
+const MAX_LENGTH = 15000;
+const BUFFER = 3000;
 
 // Setup view engine and middleware
 app.set('view engine', 'ejs');
@@ -125,9 +131,9 @@ async function getResponse(req, res, next) {
         console.log(previousResponses.length)
 
         // If total previous response length exceeds a limit, trim oldest responses
-        if (previousResponses.length >= 15000) {
+        if (previousResponses.length >= MAX_LENGTH) {
             console.log('Trimming old responses...');
-            await trimOldResponses(10000); // trim down to 14000 to allow space for new responses
+            await trimOldResponses(MAX_LENGTH - BUFFER); // trim down to 14000 to allow space for new responses
             previousResponses = await fetchPreviousResponses();
         }
 
@@ -191,9 +197,9 @@ async function saveResponseToDB(responseData) {
         }
 
         // Check the total length of responses, and trim  if it exceeds a limit
-        if ((cleanResponse.length + await calculateTotalResponseLength()) > 15000) {
+        if ((cleanResponse.length + await calculateTotalResponseLength()) > MAX_LENGTH) {
             console.log('Trimming old responses before saving new one...');
-            await trimOldResponses(15000 - cleanResponse.length);
+            await trimOldResponses(MAX_LENGTH - cleanResponse.length);
         }
 
         // Save the current response to the database
