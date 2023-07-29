@@ -10,7 +10,10 @@ const multer = require('multer')
 
 // multer variabl;es
 const storage = multer.memoryStorage(); // This will store the file in memory. You can also save it to disk or other places.
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+
+});
 
 // Load environment variables
 require('dotenv').config();
@@ -50,6 +53,10 @@ async function analyzeFile(req, res) {
         return res.status(400).send("No file uploaded");
     }
 
+    if (req.file.mimetype !== 'text/plain') {
+        return res.render('index', { data: "I'm only able to analyze txt files at the moment. Please try again, and upload a text file." })
+    }
+
     // Extract file contents
     const fileContents = req.file.buffer.toString('utf-8');
 
@@ -74,7 +81,7 @@ async function analyzeFile(req, res) {
         await response.save();
 
         // Redirect to home route with an identifier to fetch this response
-        return response._id
+        res.redirect(`/?responseId=${response._id}`);
 
     } catch (error) {
         console.error(error);
@@ -118,9 +125,9 @@ async function getResponse(req, res, next) {
         console.log(previousResponses.length)
 
         // If total previous response length exceeds a limit, trim oldest responses
-        if (previousResponses.length >= 14000) {
+        if (previousResponses.length >= 15000) {
             console.log('Trimming old responses...');
-            await trimOldResponses(14000); // trim down to 14000 to allow space for new responses
+            await trimOldResponses(10000); // trim down to 14000 to allow space for new responses
             previousResponses = await fetchPreviousResponses();
         }
 
@@ -184,9 +191,9 @@ async function saveResponseToDB(responseData) {
         }
 
         // Check the total length of responses, and trim  if it exceeds a limit
-        if ((cleanResponse.length + await calculateTotalResponseLength()) > 14000) {
+        if ((cleanResponse.length + await calculateTotalResponseLength()) > 15000) {
             console.log('Trimming old responses before saving new one...');
-            await trimOldResponses(14000 - cleanResponse.length);
+            await trimOldResponses(15000 - cleanResponse.length);
         }
 
         // Save the current response to the database
@@ -221,10 +228,8 @@ app.post('/', getResponse, showFiles, (req, res) => {
 
 app.post('/upload', getResponse, showFiles, upload.single('selectedFile'), async (req, res, next) => {
     console.log('File uploaded:', req.file); // This logs the uploaded file's details
-
     try {
-        const responseId = await analyzeFile(req, res);
-        res.redirect(`/?responseId=${responseId}`);
+        await analyzeFile(req, res);
     } catch (error) {
         console.error("Error in analyzing file:", error);
         // You can handle the error here, perhaps sending a 500 response or a custom error message.
@@ -247,6 +252,14 @@ app.get("/search", async (req, res) => {
 app.get('/searchbar', (req, res) => {
     res.render("search");
 });
+
+// app.use((err, req, res, next) => {
+//     if (err.message === 'Only .txt files are allowed!') {
+//         return res.status(400).send(err.message);
+//     }
+//     // Handle other errors here or pass them to the default Express error handler
+//     next(err);
+// });
 
 // Connect to the database and start the server
 connectToDatabase();
