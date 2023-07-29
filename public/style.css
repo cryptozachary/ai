@@ -48,6 +48,7 @@ h2 {
     grid-column-start: 1;
     grid-column-end: 3;
     align-self: flex-start;
+    padding: 2.5px;
 }
 
 form {
