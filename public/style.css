@@ -36,8 +36,8 @@ h2 {
 }
 
 h1 {
-    margin-top: 50px;
-    margin-bottom: 10px;
+    padding: 25px;
+    ;
     grid-row-start: 1;
     grid-column-start: 1;
     grid-column-end: 3;
@@ -61,6 +61,7 @@ form {
 }
 
 label {
+    margin-top: 10px;
     margin-bottom: 10px;
 }
 
@@ -77,11 +78,7 @@ input[type="text"] {
     width: 50%;
 }
 
-button[type="submit"] {
-    width: auto;
-    background-color: lightblue;
-    cursor: pointer;
-}
+
 
 .response-container {
     position: relative;
@@ -140,7 +137,8 @@ footer {
     background-color: rgb(19, 18, 18);
 }
 
-.amaru-button {
+.amaru-button,
+button {
     padding: 10px;
     font-size: 16px;
     border: none;
@@ -151,7 +149,8 @@ footer {
     /* Optional: Smoothens the color change on hover */
 }
 
-.amaru-button:hover {
+.amaru-button:hover,
+button:hover {
     background-color: deepskyblue;
     /* Optional: Gives a hover effect */
 }

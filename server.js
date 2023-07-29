@@ -98,6 +98,7 @@ async function analyzeFile(req, res) {
 // Utility function to fetch all previous responses from the database
 async function fetchPreviousResponses() {
     return (await Response.find()).map(doc => doc.response).join('');
+
 }
 
 // Utility function to calculate the total length of all stored responses
