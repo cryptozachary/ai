@@ -55,8 +55,7 @@ form {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 50px;
-    grid-row-start: 2;
+    grid-row-start: 3;
     grid-column-start: 1;
     grid-column-end: 4;
 }
@@ -113,6 +112,7 @@ button[type="submit"] {
     width: 250px;
     border: 1px solid white;
     border-radius: 50px;
+    margin-bottom: 10px;
 }
 
 #response {
@@ -175,7 +175,7 @@ footer {
 
     form {
         grid-column-start: 1;
-        grid-row-start: 2;
+        grid-row-start: 3;
     }
 
     .response-container {
@@ -186,7 +186,7 @@ footer {
 
     .amaru-container {
         grid-column-start: 1;
-        grid-row-start: 3;
+        grid-row-start: 4;
         grid-row-end: 5;
         height: unset;
         justify-content: unset;
