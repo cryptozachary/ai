@@ -25,13 +25,12 @@
                 <img id="amaru-pic" src="/public/images/amru.png" alt="Picture of Amaru" />
                 <form id="fileForm" action="/upload" method="post" enctype="multipart/form-data">
                     <!-- The file input is hidden -->
-                    <input type="file" name="selectedFile" id="fileInput" style="display: none;"
-                        onchange="submitForm()">
+                    <input type="file" name="selectedFile" id="fileInput" style="display: none;" onchange="submitForm()"
+                        accept=".txt, .docx">
                     <button type="button" class="amaru-button" onclick="selectFile()">Upload File</button>
-                    <label class="file-label">Submit any text file for an introspective yet comedic review and
+                    <label class="file-label">Submit any text/word document for an introspective yet comedic review and
                         analysis!</label>
                 </form>
-
             </div>
             <div class="response-container">
                 <div id="response">
@@ -40,7 +39,7 @@
             </div>
         </div>
         <footer>
-            <h5>Verson 0.2 - Remembers conversations! and analyzes uploaded text files!</h5>
+            <h5>Verson 0.2 - Remembers conversations and analyzes uploaded text and word documents!</h5>
         </footer>
     </div>
     <script src="/public/response.js"></script>

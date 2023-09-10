@@ -7,6 +7,8 @@ const { search } = require('./search/google');
 const Response = require('./models/Response');
 const fs = require('fs')
 const multer = require('multer')
+const mammoth = require('mammoth');
+
 
 // multer variabl;es
 const storage = multer.memoryStorage(); // This will store the file in memory. You can also save it to disk or other places.
@@ -58,13 +60,18 @@ async function analyzeFile(req, res) {
     if (!req.file) {
         return res.status(400).send("No file uploaded");
     }
+    let fileContents;
 
-    if (req.file.mimetype !== 'text/plain') {
-        return res.render('index', { data: "I'm only able to analyze txt files at the moment. Please try again, and upload a text file." })
+    if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        // Extract text from .docx file
+        const extracted = await mammoth.extractRawText({ buffer: req.file.buffer });
+        fileContents = extracted.value; // Get the extracted text
+    } else if (req.file.mimetype === 'text/plain') {
+        // Handle .txt files
+        fileContents = req.file.buffer.toString('utf-8');
+    } else {
+        return res.render('index', { data: "I'm only able to analyze .txt and .docx files at the moment. Please try again with a supported file type." });
     }
-
-    // Extract file contents
-    const fileContents = req.file.buffer.toString('utf-8');
 
     // You can use the fileContents now.
     // For demonstration, let's pass the fileContents as a part of the prompt to OpenAI.
@@ -214,6 +221,7 @@ async function saveResponseToDB(responseData) {
 }
 
 // Define the API routes
+//Fetches a response from OpenAI and displays it.
 app.get('/', getResponse, showFiles, async (req, res) => {
     let responseData = req.APIresponse.data.choices[0].message.content;
 
@@ -229,11 +237,13 @@ app.get('/', getResponse, showFiles, async (req, res) => {
     res.render("index", { data: responseData });
 });
 
+//Processes user input, gets a response from OpenAI, and displays it.
 app.post('/', getResponse, showFiles, (req, res) => {
     res.render("index", { data: req.APIresponse.data.choices[0].message.content });
 });
 
-app.post('/upload', getResponse, showFiles, upload.single('selectedFile'), async (req, res, next) => {
+// Handles file uploads and analysis
+app.post('/upload', showFiles, upload.single('selectedFile'), async (req, res, next) => {
     console.log('File uploaded:', req.file); // This logs the uploaded file's details
     try {
         await analyzeFile(req, res);
