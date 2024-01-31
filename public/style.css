@@ -103,6 +103,7 @@ input[type="text"] {
     /* Makes children stack vertically */
     align-items: center;
     /* Centers children horizontally */
+    text-align: center;
 }
 
 #amaru-pic {
