@@ -2,12 +2,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-const { Configuration, OpenAIApi } = require("openai");
+const { Configuration, OpenAIApi, default: OpenAI } = require("openai");
 const { search } = require('./search/google');
 const Response = require('./models/Response');
 const fs = require('fs')
 const multer = require('multer')
 const mammoth = require('mammoth');
+
 
 
 // multer variabl;es
@@ -38,9 +39,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Initialize the OpenAI API client
-const openai = new OpenAIApi(new Configuration({
+const openai = new OpenAI({
+    organization: 'org-sVb7ymsm9gS07OANf25QINkT',
     apiKey: process.env.Open_AI_Key,
-}));
+});
 
 // Function to connect to the MongoDB database
 async function connectToDatabase() {
@@ -79,7 +81,7 @@ async function analyzeFile(req, res) {
 
     try {
         // Send the prompt to OpenAI and get a response
-        const chatResponse = await openai.createChatCompletion({
+        const chatResponse = await openai.chat.completions.create({
             model: "gpt-3.5-turbo-16k",
             messages: [{ role: "system", content: identity[0] }, { role: "user", content: prompt }],
             temperature: 0.4,
@@ -90,7 +92,7 @@ async function analyzeFile(req, res) {
 
         });
         // Save the chatResponse to MongoDB (or any temporary storage you prefer)
-        const response = new Response({ response: chatResponse.data.choices[0].message.content });
+        const response = new Response({ response: chatResponse.choices[0].message.content });
         await response.save();
 
         // Redirect to home route with an identifier to fetch this response
@@ -149,18 +151,18 @@ async function getResponse(req, res, next) {
         const thePrompt = previousResponses + (req.body.prompt || '');
 
         // Get the response from OpenAI model
-        const chatResponse = await openai.createChatCompletion({
-            model: "gpt-3.5-turbo-16k",
+        const chatResponse = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
             messages: [{ role: "system", content: identity[0] }, { role: "user", content: thePrompt }],
             temperature: 0.4,
-            max_tokens: 12200,
+            max_tokens: 4096,
             top_p: 1,
             frequency_penalty: 0.2,
             presence_penalty: 0,
         });
 
         // Construct the response string and save it
-        const questionResponse = (req.body.prompt || '') + " " + chatResponse.data.choices[0].message.content;
+        const questionResponse = (req.body.prompt || '') + " " + chatResponse.choices[0].message.content;
 
         await saveResponseToDB(questionResponse);
 
@@ -177,8 +179,8 @@ async function getResponse(req, res, next) {
 async function showFiles(req, res, next) {
 
     try {
-        const response = await openai.listFiles();
-        console.log(response.data.object.list)
+        const response = await openai.files.list();
+        console.log(response.data)
         next()
     }
     catch (error) {
@@ -223,7 +225,7 @@ async function saveResponseToDB(responseData) {
 // Define the API routes
 //Fetches a response from OpenAI and displays it.
 app.get('/', getResponse, showFiles, async (req, res) => {
-    let responseData = req.APIresponse.data.choices[0].message.content;
+    let responseData = req.APIresponse.choices[0].message.content;
 
     // If there's a responseId in the query parameters
     if (req.query.responseId) {
@@ -239,7 +241,7 @@ app.get('/', getResponse, showFiles, async (req, res) => {
 
 //Processes user input, gets a response from OpenAI, and displays it.
 app.post('/', getResponse, showFiles, (req, res) => {
-    res.render("index", { data: req.APIresponse.data.choices[0].message.content });
+    res.render("index", { data: req.APIresponse.choices[0].message.content });
 });
 
 // Handles file uploads and analysis
